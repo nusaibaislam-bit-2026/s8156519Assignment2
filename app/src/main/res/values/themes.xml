@@ -1,9 +1,34 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.S8156519Assignment2" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.S8156519Assignment2"
+        parent="Theme.Material3.Light.NoActionBar">
+
+        <!-- Main brand colours -->
+        <item name="colorPrimary">@color/food_orange</item>
+        <item name="colorOnPrimary">@color/food_white</item>
+        <item name="colorPrimaryContainer">@color/food_peach</item>
+        <item name="colorOnPrimaryContainer">@color/food_brown</item>
+
+        <!-- Secondary colours -->
+        <item name="colorSecondary">@color/food_green</item>
+        <item name="colorOnSecondary">@color/food_white</item>
+        <item name="colorSecondaryContainer">@color/food_green_light</item>
+        <item name="colorOnSecondaryContainer">@color/food_brown</item>
+
+        <!-- Background and card colours -->
+        <item name="android:colorBackground">@color/food_cream</item>
+        <item name="colorSurface">@color/food_cream</item>
+        <item name="colorOnSurface">@color/food_brown</item>
+        <item name="colorSurfaceVariant">@color/food_peach</item>
+        <item name="colorOnSurfaceVariant">@color/food_brown_light</item>
+        <item name="colorOutline">@color/food_border</item>
+
+        <!-- Status and navigation bars -->
+        <item name="android:statusBarColor">@color/food_cream</item>
+        <item name="android:navigationBarColor">@color/food_cream</item>
+        <item name="android:windowLightStatusBar">true</item>
+
     </style>
 
-    <style name="Theme.S8156519Assignment2" parent="Base.Theme.S8156519Assignment2" />
 </resources>
