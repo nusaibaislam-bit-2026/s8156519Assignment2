@@ -99,7 +99,7 @@ The tests verify:
 - Successful Dashboard request produces a food list
 - Failed Dashboard request produces an error state
 
-Windows test command: `gradlew.bat test`
+Windows test command: `.\gradlew.bat test`
 
 ## How to Run the Application
 
