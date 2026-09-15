@@ -4,35 +4,33 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.s8156519assignment2.R
 import com.example.s8156519assignment2.data.model.Food
 import com.example.s8156519assignment2.databinding.FragmentDashboardBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class DashboardFragment :
-    Fragment(R.layout.fragment_dashboard) {
+class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
     private var _binding: FragmentDashboardBinding? = null
-
-    private val binding: FragmentDashboardBinding
-        get() = _binding!!
+    private val binding get() = _binding!!
 
     private val viewModel: DashboardViewModel by viewModels()
 
-    private val foodAdapter = FoodAdapter { selectedFood ->
-        openFoodDetails(selectedFood)
-    }
-
-    private val keypass: String
-        get() = arguments?.getString("keypass").orEmpty()
+    private lateinit var foodAdapter: FoodAdapter
+    private var allFoods: List<Food> = emptyList()
+    private var keypass: String = ""
 
     override fun onViewCreated(
         view: View,
@@ -41,25 +39,75 @@ class DashboardFragment :
         super.onViewCreated(view, savedInstanceState)
 
         _binding = FragmentDashboardBinding.bind(view)
+        keypass = arguments?.getString("keypass").orEmpty()
 
         setupRecyclerView()
-        setupRetryButton()
+        setupSearch()
+        setupButtons()
         observeDashboardState()
 
-        if (viewModel.uiState.value is DashboardUiState.Idle) {
-            viewModel.loadFoods(keypass)
-        }
+        viewModel.loadFoods(keypass)
     }
 
     private fun setupRecyclerView() {
-        binding.foodsRecyclerView.adapter = foodAdapter
-        binding.foodsRecyclerView.setHasFixedSize(true)
+        foodAdapter = FoodAdapter { food ->
+            openFoodDetails(food)
+        }
+
+        binding.foodsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = foodAdapter
+        }
     }
 
-    private fun setupRetryButton() {
+    private fun setupSearch() {
+        binding.searchEditText.doAfterTextChanged { editable ->
+            val query = editable?.toString()?.trim().orEmpty()
+
+            val filteredFoods = if (query.isBlank()) {
+                allFoods
+            } else {
+                allFoods.filter { food ->
+                    food.dishName.contains(query, ignoreCase = true) ||
+                            food.origin.contains(query, ignoreCase = true) ||
+                            food.mainIngredient.contains(query, ignoreCase = true) ||
+                            food.mealType.contains(query, ignoreCase = true)
+                }
+            }
+
+            foodAdapter.submitList(filteredFoods)
+            binding.entityCountText.text =
+                "${filteredFoods.size} dishes available"
+        }
+    }
+
+    private fun setupButtons() {
         binding.retryButton.setOnClickListener {
             viewModel.loadFoods(keypass)
         }
+
+        binding.logoutButton.setOnClickListener {
+            showLogoutConfirmation()
+        }
+    }
+
+    private fun showLogoutConfirmation() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to return to the Login page?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Logout") { _, _ ->
+                val options = NavOptions.Builder()
+                    .setPopUpTo(R.id.loginFragment, true)
+                    .build()
+
+                findNavController().navigate(
+                    R.id.loginFragment,
+                    null,
+                    options
+                )
+            }
+            .show()
     }
 
     private fun observeDashboardState() {
@@ -68,55 +116,53 @@ class DashboardFragment :
                 Lifecycle.State.STARTED
             ) {
                 viewModel.uiState.collect { state ->
-                    displayDashboardState(state)
+                    when (state) {
+                        is DashboardUiState.Idle -> {
+                            showLoading(false)
+                        }
+
+                        is DashboardUiState.Loading -> {
+                            showLoading(true)
+                        }
+
+                        is DashboardUiState.Success -> {
+                            showLoading(false)
+
+                            allFoods = state.foods
+                            foodAdapter.submitList(state.foods)
+
+                            binding.entityCountText.text =
+                                "${state.entityTotal} dishes available"
+
+                            binding.foodsRecyclerView.isVisible = true
+                            binding.errorContainer.isVisible = false
+                        }
+
+                        is DashboardUiState.Error -> {
+                            showLoading(false)
+
+                            binding.foodsRecyclerView.isVisible = false
+                            binding.errorContainer.isVisible = true
+                            binding.errorText.text = state.message
+                        }
+                    }
                 }
             }
         }
     }
 
-    private fun displayDashboardState(
-        state: DashboardUiState
-    ) {
-        when (state) {
-            DashboardUiState.Idle -> {
-                binding.dashboardProgressBar.isVisible = false
-                binding.dashboardErrorContainer.isVisible = false
-                binding.foodsRecyclerView.isVisible = false
-            }
+    private fun showLoading(isLoading: Boolean) {
+        binding.dashboardProgressBar.isVisible = isLoading
 
-            DashboardUiState.Loading -> {
-                binding.dashboardProgressBar.isVisible = true
-                binding.dashboardErrorContainer.isVisible = false
-                binding.foodsRecyclerView.isVisible = false
-                binding.entityCountText.text =
-                    "Loading food collection..."
-            }
-
-            is DashboardUiState.Success -> {
-                binding.dashboardProgressBar.isVisible = false
-                binding.dashboardErrorContainer.isVisible = false
-                binding.foodsRecyclerView.isVisible = true
-
-                binding.entityCountText.text =
-                    "${state.entityTotal} dishes available"
-
-                foodAdapter.submitList(state.foods)
-            }
-
-            is DashboardUiState.Error -> {
-                binding.dashboardProgressBar.isVisible = false
-                binding.dashboardErrorContainer.isVisible = true
-                binding.foodsRecyclerView.isVisible = false
-                binding.entityCountText.text =
-                    "Food collection unavailable"
-
-                binding.dashboardErrorText.text = state.message
-            }
+        if (isLoading) {
+            binding.foodsRecyclerView.isVisible = false
+            binding.errorContainer.isVisible = false
+            binding.entityCountText.text = "Loading delicious dishes..."
         }
     }
 
     private fun openFoodDetails(food: Food) {
-        val foodDetails = bundleOf(
+        val arguments = bundleOf(
             "dishName" to food.dishName,
             "origin" to food.origin,
             "mainIngredient" to food.mainIngredient,
@@ -126,7 +172,7 @@ class DashboardFragment :
 
         findNavController().navigate(
             R.id.action_dashboardFragment_to_detailsFragment,
-            foodDetails
+            arguments
         )
     }
 
