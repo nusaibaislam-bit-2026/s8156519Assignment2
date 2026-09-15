@@ -78,4 +78,5 @@ dependencies {
     // Android device tests
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+
 }
